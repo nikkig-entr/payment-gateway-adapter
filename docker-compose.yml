@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # TEST RUNNER
+  # ============================================
+  test:
+    build:
+      context: ./src/PaymentGatewayAdapter
+      dockerfile: Dockerfile
+      target: test
+    container_name: payment-gateway-test
+    environment:
+      - MONOBANK_MERCHANT_ID=test_merchant
+      - MONOBANK_SECRET_KEY=test_secret
+      - MONOBANK_WEBHOOK_SECRET=test_webhook_secret
+      - MONOBANK_BUSINESS_BASE_URL=https://api.monobank.ua/api/merchant/
+      - MONOBANK_CALLBACK_URL=https://example.com/callback
+    networks:
+      - payment-network
+    depends_on:
+      - mock-monobank
+
+  # ============================================
+  # MONOBANK MOCK SERVER (for integration tests)
+  # ============================================
+  mock-monobank:
+    image: mountebank/mountebank:latest
+    container_name: mock-monobank
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./mountebank:/mb
+    command: mb --configfile /mb/monobank-imposter.json --allowInjection
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================
+  # POSTGRESQL (for idempotency store / reconciliation)
+  # ============================================
+  db:
+    image: postgres:16-alpine
+    container_name: payment-gateway-db
+    environment:
+      - POSTGRES_DB=paymentgateway
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paymentgateway"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================
+  # REDIS (for distributed idempotency store)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: payment-gateway-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+networks:
+  payment-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,112 @@
+{
+  "imposters": [
+    {
+      "port": 8081,
+      "protocol": "http",
+      "name": "monobank-mock",
+      "recordRequests": true,
+      "stubs": [
+        {
+          "predicates": [
+            {
+              "matches": {
+                "method": "POST",
+                "path": "/api/merchant/invoice/create"
+              }
+            }
+          ],
+          "responses": [
+            {
+              "is": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "invoiceId": "inv_${{REQUEST.body.orderId}}",
+                  "pageUrl": "https://pay.monobank.ua/inv_${{REQUEST.body.orderId}}",
+                  "expirationDate": "{{date.now 'unix' 'addHours' 1}}",
+                  "qrCode": "base64qr=="
+                }
+              }
+            }
+          ]
+        },
+        {
+          "predicates": [
+            {
+              "matches": {
+                "method": "GET",
+                "path": "/personal/statement/*"
+              }
+            }
+          ],
+          "responses": [
+            {
+              "is": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": [
+                  {
+                    "id": "txn_001",
+                    "time": "{{date.now 'unix' 'subtractHours' 2}}",
+                    "amount": 10000,
+                    "currencyCode": 980,
+                    "description": "Test payment",
+                    "status": "approved",
+                    "maskedPan": "4444********1111"
+                  },
+                  {
+                    "id": "txn_002",
+                    "time": "{{date.now 'unix' 'subtractHours' 5}}",
+                    "amount": -5000,
+                    "currencyCode": 980,
+                    "description": "Refund",
+                    "status": "reversed",
+                    "maskedPan": "4444********1111"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "predicates": [
+            {
+              "matches": {
+                "method": "GET",
+                "path": "/personal/client-info"
+              }
+            }
+          ],
+          "responses": [
+            {
+              "is": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "clientId": "client_123",
+                  "name": "Test Merchant",
+                  "status": "verified",
+                  "accounts": [
+                    {
+                      "id": "acc_1",
+                      "currencyCode": 980,
+                      "balance": 5000000,
+                      "creditLimit": 10000000,
+                      "type": "main"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
