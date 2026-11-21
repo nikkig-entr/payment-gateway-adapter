@@ -253,4 +253,4 @@ MIT — Use in client projects freely.
 
 ---
 
-**Built by a C# engineer with 10+ years integrating LiqPay, Portmone, WayForPay, Stripe, PayPal, Monobank for high-load e-commerce and fintech.**
+**Built by a C# engineer with 10+ years integrating LiqPay, Portmone, WayForPay, Stripe, PayPal, Monobank for high-load e-commerce and fintech.**# CI triggered
